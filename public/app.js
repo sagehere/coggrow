@@ -27,8 +27,8 @@ function notice(text){
 }
 async function api(path,body){
   const response=await fetch('/api'+path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const result=await response.json();
-  if(!response.ok) throw Error(result.error||'请求失败，请稍后重试。');
+  const result=await response.json().catch(()=>{throw Error('服务返回了无法识别的响应（HTTP '+response.status+'）。请稍后重试。');});
+  if(!response.ok) throw Error(result?.error||'请求失败，请稍后重试。');
   return result;
 }
 const childPath=(suffix='')=>'/child/'+selected+suffix;
@@ -182,7 +182,7 @@ function settingsScreen(){
 function aiScreen(){
   const pending=drafts.filter(d=>d.status==='pending');
   return '<section class="card"><h2>阅读材料</h2><p>'+(bootstrap.ai?'生成后先核对答案和原文依据，通过后可加入练习。':'内置材料可直接使用。接入模型后可以生成新素材。')+'</p>'+
-    (bootstrap.ai?'<form id="draft"><label>训练类型<select name="module"><option value="reading">段落理解</option><option value="sentence">句子理解</option><option value="cause">因果推理</option></select></label>'+saveButton('生成待审材料')+'</form>':'')+
+    (bootstrap.ai?'<form id="draft"><label>训练类型<select name="module"><option value="reading">段落理解</option><option value="sentence">句子理解</option><option value="cause">因果推理</option></select></label>'+saveButton('生成待审材料')+'<p id="draft-status" role="status" hidden></p></form>':'')+
     pending.map(d=>'<details><summary>'+moduleFor(d.module).name+' · 待审核</summary><p>'+esc(d.body.passage)+'</p><p><strong>'+esc(d.body.prompt)+'</strong></p>'+
       '<p>选项：'+esc(d.body.options.join(' / '))+'</p><p>答案：'+esc(d.body.correct)+'</p><p>'+esc(d.body.evidence)+'</p><p>提示：'+esc(d.body.hint)+'</p>'+
       '<div class="module-actions">'+button('review','审核通过','data-id="'+d.id+'" data-approve="true"','primary')+
@@ -525,12 +525,22 @@ app.addEventListener('submit',async event=>{
     }else if(form.id==='observation'){
       await api(childPath('/observation'),data);await load();notice('观察记录已保存。');
     }else if(form.id==='draft'){
-      notice('正在生成待审材料。');await api(childPath('/drafts'),data);await load();notice('材料已生成，可以审核。');
+      const status=$('#draft-status');
+      status.textContent='正在生成待审材料…';
+      status.hidden=false;
+      await api(childPath('/drafts'),data);
+      await load();
+      notice('材料已生成，可以审核。');
     }else if(form.id==='delete'){
       await api(childPath('/delete'),data);selected=null;detail=null;await load('today');notice('档案已删除。');
     }
-  }catch(error){notice(error.message);}
-  finally{navigationBusy=false;submit.disabled=false;}
+  }catch(error){
+    const status=form.id==='draft'&&$('#draft-status');
+    if(status){
+      status.textContent=error.message;
+      status.hidden=false;
+    }else notice(error.message);
+  }finally{navigationBusy=false;submit.disabled=false;}
 });
 function interrupt(reason){
   if(!session||session.status!=='active'||awaitingInput||busy)return;

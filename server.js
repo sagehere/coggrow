@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { modules, makeQuestions, score } from './content.js';
-import { aiConfigured, generateReading } from './ai.js';
+import { AiGenerationError, aiConfigured, generateReading } from './ai.js';
 import { adaptation, ageInMonths, cycleDay, cycleDefault, dayKey, dayOffset, daysBetween, focusLabels, ruleVersion, tasksFor, validDate } from './rules.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -409,7 +409,10 @@ async function api(req,res,url){
     loginLimit(req);
     let question;
     try{question=await generateReading(profile,input.module);}
-    catch{fail(502,'没有生成可审核的题目，可继续使用内置练习。');}
+    catch(error){
+      if(error instanceof AiGenerationError) fail(502,error.message);
+      throw error;
+    }
     run('INSERT INTO drafts VALUES(?,?,?,?,?,?)',randomUUID(),child,input.module,json(question),'pending',now());
     return respond(res,{ok:true});
   }

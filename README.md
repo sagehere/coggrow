@@ -95,7 +95,9 @@ coggrow.example.com {
 
 ## 阅读材料与模型
 
-默认使用内置阅读材料和程序生成的数学题。可选配置 `COGGROW_AI_BASE_URL`、`COGGROW_AI_MODEL`、`COGGROW_AI_KEY`，其中 URL 是服务的 HTTPS API 根地址，例如以 `/v1` 结尾。直接启动时对应为 `AI_BASE_URL`、`AI_MODEL`、`AI_KEY`。模型密钥留在服务端，调用仅发送年龄段、训练类型和素材主题。生成草稿通过结构检查后，需在「家长设置 → 阅读材料」检查答案、依据和年龄适宜性后批准。批准后会替换对应阅读练习组中的一题。复测使用内置材料。
+默认使用内置阅读材料和程序生成的数学题。可选配置 `COGGROW_AI_BASE_URL`、`COGGROW_AI_MODEL`、`COGGROW_AI_KEY`，其中 URL 可填服务的 HTTPS API 根地址（如 `https://api.example.com/v1`），或完整的 Chat Completions 地址（如 `https://api.example.com/v1/chat/completions`）。直接启动时对应为 `AI_BASE_URL`、`AI_MODEL`、`AI_KEY`。模型密钥留在服务端，调用仅发送年龄段、训练类型和素材主题。生成草稿通过结构检查后，需在「家长设置 → 阅读材料」检查答案、依据和年龄适宜性后批准。批准后会替换对应阅读练习组中的一题。复测使用内置材料。
+
+生成失败时，阅读材料卡片会显示原因。HTTP 401/403 请检查密钥和模型权限，HTTP 404 请核对接口与模型名，HTTP 429 请检查用量和限流。如果提示题目被截断或返回空白，可换用响应较快的文本模型重试。草稿仍要求四个不同的选项，原文依据须能在材料中逐字找到。
 
 ## 数据备份与回滚
 

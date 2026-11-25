@@ -8,12 +8,13 @@ test('page script paints today, calendar, report and parent settings with API re
   const listeners={};
   const el={innerHTML:'',addEventListener:(name,handler)=>{listeners[name]=handler;}};
   const store=new Map();
+  const draftStatus={hidden:true};
   const profile={id:'test-child',name:'小岚',birth:'2016-03-25',ageMonths:124,grade:4,scope:'comparison'};
   const detail={profile,today:{date:'2026-08-02',cycle:1,rest:false,tasks:[{id:'math',minutes:5}]},config:{
     cycle:'11011010',focus:'math',minutes:15,anchor:'2026-08-01',stageStart:'2026-08-01',longGoal:'读清条件'
   },active:[],checkDue:'2026-08-30',states:{}};
   const replies={
-    '/api/bootstrap':{role:'parent',profiles:[profile],modules,today:'2026-08-02',ai:false},
+    '/api/bootstrap':{role:'parent',profiles:[profile],modules,today:'2026-08-02',ai:true},
     '/api/child/test-child':detail,
     '/api/child/test-child/calendar?month=2026-08':{days:[detail.today]},
     '/api/child/test-child/report':{sessions:[],observations:[],events:[],versions:[]},
@@ -23,9 +24,12 @@ test('page script paints today, calendar, report and parent settings with API re
     }}
   };
   const context=createContext({
-    document:{querySelector:selector=>selector==='#app'?el:{},addEventListener(){}},window:{addEventListener(){}},
+    document:{querySelector:selector=>selector==='#app'?el:selector==='#draft-status'?draftStatus:{},addEventListener(){}},window:{addEventListener(){}},
     navigator:{},sessionStorage:{setItem:(key,value)=>store.set(key,value),getItem:key=>store.get(key)},
-    fetch:async path=>({ok:Object.hasOwn(replies,path),json:async()=>replies[path]??{error:'未预期的请求'}}),
+    FormData:class { *[Symbol.iterator](){yield ['module','sentence'];} },
+    fetch:async (path,init)=>init?.method==='POST'&&path.endsWith('/drafts')
+      ? {ok:false,json:async()=>({error:'模型服务拒绝了访问（HTTP 401）。'})}
+      : {ok:Object.hasOwn(replies,path),json:async()=>replies[path]??{error:'未预期的请求'}},
     matchMedia:()=>({matches:false}),
     setTimeout,clearTimeout,performance,Intl,Date
   });
@@ -42,6 +46,12 @@ test('page script paints today, calendar, report and parent settings with API re
   await click('[data-nav]',{nav:'settings'});
   assert.match(el.innerHTML,/读清条件/);
   assert.match(el.innerHTML,/已学数学范围/);
+  assert.match(el.innerHTML,/id="draft-status"/);
+  const submit={disabled:false};
+  await listeners.submit({preventDefault(){},target:{id:'draft',querySelector:()=>submit}});
+  assert.equal(draftStatus.hidden,false);
+  assert.match(draftStatus.textContent,/HTTP 401/);
+  assert.equal(submit.disabled,false);
   await click('[data-nav]',{nav:'today'});
   await click('[data-action]',{action:'start',id:'math',scheduled:'true'});
   assert.match(el.innerHTML,/先看规则/);
