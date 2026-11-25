@@ -20,12 +20,12 @@ docker login ghcr.io -u YOUR_GITHUB_USERNAME
 ```
 
 1. 在 Dockge 新建名为 `coggrow` 的 Stack，将仓库中的 [`compose.yaml`](compose.yaml) 原样粘贴到 Compose 编辑区。默认镜像为 `ghcr.io/sagehere/coggrow:latest`。
-2. 在 Stack 的 `.env` 中设置下面的变量。将示例口令替换为随机生成的值，可以在服务器上运行 `openssl rand -hex 24` 生成。
+2. 打开仓库根目录的 [`.env.example`](.env.example)，将内容粘贴到 Dockge 的 `.env` 编辑区。如果直接在服务器上管理文件，将 `.env.example` 复制为 `.env`，并与 `compose.yaml` 放在同一个 Stack 目录。把 `COGGROW_SETUP_CODE` 填成随机值，可用 `openssl rand -hex 24` 生成。
 3. 启动 Stack。例子中宿主机地址为 `192.168.1.50`，浏览器访问 `http://192.168.1.50:9100`。用初始化口令建立第一个家长账号，之后使用家长账号和密码登录。
 
 ```dotenv
-# Stack 的 .env 示例
-COGGROW_SETUP_CODE=replace-with-a-random-value
+# Stack 里的 .env 最小配置
+COGGROW_SETUP_CODE=替换为你生成的随机口令
 COGGROW_PORT=9100
 ```
 
@@ -39,10 +39,15 @@ COGGROW_PORT=9100
 mkdir -p coggrow
 cd coggrow
 curl -fsSL https://raw.githubusercontent.com/sagehere/coggrow/main/compose.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/sagehere/coggrow/main/.env.example -o .env.example
 
 # 首次部署时创建 .env，重复运行会保留已有配置。
 if [ ! -f .env ]; then
-  (umask 077; printf 'COGGROW_SETUP_CODE=%s\nCOGGROW_PORT=9100\n' "$(openssl rand -hex 24)" > .env)
+  (
+    umask 077
+    setup_code=$(openssl rand -hex 24) &&
+      sed "s/^COGGROW_SETUP_CODE=$/COGGROW_SETUP_CODE=$setup_code/" .env.example > .env
+  ) || exit 1
 fi
 
 docker compose pull
@@ -60,7 +65,8 @@ curl -fsS http://127.0.0.1:9100/health
 ```sh
 git clone https://github.com/sagehere/coggrow.git
 cd coggrow
-# 在当前目录创建 .env，并填入初始化口令。
+cp -n .env.example .env
+# 编辑 .env，填写 COGGROW_SETUP_CODE 后再执行下面两行。
 docker build -t coggrow:local .
 COGGROW_IMAGE=coggrow:local docker compose up -d --pull never
 ```
