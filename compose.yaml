@@ -1,0 +1,17 @@
+services:
+  coggrow:
+    image: "${COGGROW_IMAGE:-ghcr.io/sagehere/coggrow:latest}"
+    restart: unless-stopped
+    ports:
+      - "${COGGROW_PORT:-9100}:3000"
+    environment:
+      TZ: Asia/Shanghai
+      SETUP_CODE: "${COGGROW_SETUP_CODE:?在 .env 设置初始化口令}"
+      SECURE_COOKIE: "${COGGROW_SECURE_COOKIE:-0}"
+      AI_BASE_URL: "${COGGROW_AI_BASE_URL:-}"
+      AI_MODEL: "${COGGROW_AI_MODEL:-}"
+      AI_KEY: "${COGGROW_AI_KEY:-}"
+    volumes:
+      - coggrow-data:/data
+volumes:
+  coggrow-data:
