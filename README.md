@@ -6,18 +6,14 @@
 
 | 使用场景 | 推荐方式 |
 | --- | --- |
-| 已在 VPS 使用 Dockge | 复制 `compose.yaml`，拉取 GHCR 镜像 |
+| 已在 VPS 使用 Dockge | 复制 `compose.yaml`，免登录拉取 GHCR 镜像 |
 | 在服务器上使用 Docker Compose 命令行 | 下载 `compose.yaml`，执行 `docker compose pull` 和 `docker compose up -d` |
-| 手头没有 GHCR 包读取权限 | 从仓库克隆源码，在服务器上构建同一个应用容器 |
+| 需要自行构建镜像 | 克隆源码，在服务器上构建应用容器 |
 | 只想在电脑上试用 | 直接用 Node.js 启动 |
 
 ### 使用 Dockge 部署
 
-前提是 Docker 主机已安装 Dockge，可以访问 `ghcr.io`。GHCR 包有独立的访问权限。拉取私有包时，请使用有包读取权限的 GitHub 账号和带 `read:packages` 权限的经典个人访问令牌。在 Docker 主机用交互方式登录，把令牌填入密码提示。Dockge 使用的 Docker 凭据配置应能读取这次登录凭据。[GitHub 容器仓库认证说明](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-
-```sh
-docker login ghcr.io -u YOUR_GITHUB_USERNAME
-```
+前提是 Docker 主机已安装 Dockge，可以访问 `ghcr.io`。CogGrow 的 GHCR 镜像包已公开，可以直接拉取，支持 AMD64 和 ARM64。[查看镜像包和标签](https://github.com/users/sagehere/packages/container/package/coggrow)
 
 1. 在 Dockge 新建名为 `coggrow` 的 Stack，将仓库中的 [`compose.yaml`](compose.yaml) 原样粘贴到 Compose 编辑区。默认镜像为 `ghcr.io/sagehere/coggrow:latest`。
 2. 打开仓库根目录的 [`.env.example`](.env.example)，将内容粘贴到 Dockge 的 `.env` 编辑区。如果直接在服务器上管理文件，将 `.env.example` 复制为 `.env`，并与 `compose.yaml` 放在同一个 Stack 目录。把 `COGGROW_SETUP_CODE` 填成随机值，可用 `openssl rand -hex 24` 生成。
@@ -33,7 +29,7 @@ COGGROW_PORT=9100
 
 ### 使用 Docker Compose 命令行部署
 
-准备好 Docker Compose v2、`curl` 和 OpenSSL，按上文登录 GHCR，然后在服务器上运行以下命令。初始化口令只在首次建号时使用，请从 `.env` 查看并妥善保存。
+准备好 Docker Compose v2、`curl` 和 OpenSSL，在服务器上运行以下命令。初始化口令只在首次建号时使用，请从 `.env` 查看并妥善保存。
 
 ```sh
 mkdir -p coggrow
@@ -60,7 +56,7 @@ curl -fsS http://127.0.0.1:9100/health
 
 ### 从公开源码构建本地镜像
 
-这个方式使用同一份 Compose 和数据卷，可用于 GHCR 私有包拉取受限的情况。克隆后在仓库根目录按上面的 `.env` 示例设置 `COGGROW_SETUP_CODE`，再构建和启动：
+在需要自行构建时，可以使用同一份 Compose 和数据卷。克隆后在仓库根目录按上面的 `.env` 示例设置 `COGGROW_SETUP_CODE`，再构建和启动：
 
 ```sh
 git clone https://github.com/sagehere/coggrow.git
